@@ -29,9 +29,9 @@ async fn handle_client_async(mut stream: TcpStream) {
         "/" => {
             response = "HTTP/1.1 200 OK\r\n\r\n";
         }
-        s if {
+        path if {
             let pattern = Regex::new(r"/echo/.+").unwrap();
-            pattern.is_match(s.trim())
+            pattern.is_match(path.trim())
         } =>
         {
             let path = request_path.split_once("/echo/").unwrap().1;
