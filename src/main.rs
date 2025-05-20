@@ -67,14 +67,18 @@ async fn handle_client_async(mut stream: TcpStream) {
 fn handle_file_path(request_path: String) -> String {
     let args: Vec<String> = env::args().collect();
     let directory = args
-        .iter()
-        .find(|&arg| arg.starts_with("--directory="))
-        .unwrap()
-        .split("=")
-        .collect::<Vec<&str>>()[1];
+         .iter()
+         .find(|&arg| arg.starts_with("--directory="))
+         .unwrap()
+         .split("=")
+         .collect::<Vec<&str>>()[1];
     let file = request_path.split_once("/files/").unwrap().1;
 
-    match fs::read(format!("{directory}{file}")) {
+    let full_path = format!("{directory}{file}");
+    
+    println!("File path is: {full_path}");
+
+    match fs::read(full_path) {
         Ok(content) => format!(
             "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
             content.len(),
