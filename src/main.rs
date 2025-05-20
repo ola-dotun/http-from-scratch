@@ -78,7 +78,7 @@ fn handle_file_path(request_path: String) -> String {
         Ok(content) => format!(
             "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
             content.len(),
-            content.len()
+            String::from_utf8(content).unwrap().trim(),
         ),
         Err(_) => "HTTP/1.1 404 NOT FOUND\r\n\r\n".to_string(),
     }
