@@ -49,7 +49,7 @@ async fn handle_client_async(mut stream: TcpStream) {
         }
         file_path
             if {
-                let pattern = Regex::new(r"/files/(.*)").unwrap();
+                let pattern = Regex::new(r"/files/.*").unwrap();
                 pattern.is_match(file_path.trim())
             } =>
         {
