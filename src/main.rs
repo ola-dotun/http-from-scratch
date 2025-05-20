@@ -53,9 +53,7 @@ async fn handle_client_async(mut stream: TcpStream) {
                 pattern.is_match(file_path.trim())
             } =>
         {
-            let file = request_path.split_once("/file/").unwrap().1;
-            let content = fs::read(file).unwrap();
-            formatted = format!("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}", content.len(), content.len());
+            formatted = handle_file_path(request_path);
             response = formatted.trim();
         }
         _ => {
@@ -64,6 +62,16 @@ async fn handle_client_async(mut stream: TcpStream) {
     }
     println!("Request was {} and response was {}", data, response);
     stream.write_all(response.as_bytes()).unwrap();
+}
+
+fn handle_file_path(request_path: String) -> String {
+    let file = request_path.split_once("/file/").unwrap().1;
+    let content = fs::read(file).unwrap();
+    format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
+        content.len(),
+        content.len()
+    )
 }
 
 fn user_agent(header_and_body: &str) -> String {
