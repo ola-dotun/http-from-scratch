@@ -23,6 +23,7 @@ fn main() {
                         response = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
                     }
                 }
+                println!("Request was {} and response was {}", data, response);
                 _stream.write_all(response.as_bytes()).unwrap();
                 
             }
