@@ -1,8 +1,8 @@
 use regex::Regex;
 use std::collections::HashMap;
-use std::{env, fs};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::{env, fs};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -66,17 +66,22 @@ async fn handle_client_async(mut stream: TcpStream) {
 
 fn handle_file_path(request_path: String) -> String {
     let args: Vec<String> = env::args().collect();
-    let directory = args.iter().find(|&arg| arg.starts_with("--directory=")).unwrap().split("=").collect::<Vec<&str>>()[1];
+    let directory = args
+        .iter()
+        .find(|&arg| arg.starts_with("--directory="))
+        .unwrap()
+        .split("=")
+        .collect::<Vec<&str>>()[1];
     let file = request_path.split_once("/files/").unwrap().1;
-    
-    match fs::read(format!("{directory}/{file}")) {
+
+    match fs::read(format!("{directory}{file}")) {
         Ok(content) => format!(
             "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
             content.len(),
             content.len()
         ),
         Err(_) => "HTTP/1.1 404 NOT FOUND\r\n\r\n".to_string(),
-    }    
+    }
 }
 
 fn user_agent(header_and_body: &str) -> String {
