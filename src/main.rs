@@ -22,11 +22,12 @@ async fn handle_client_async(mut stream: TcpStream) {
 
     let (request_line, header_and_body) = data.split_once("\r\n").unwrap();
     let request_path = parse_header(request_line).path;
+    let request_path = request_path.as_str();
 
     let response: &str;
     let formatted;
 
-    match request_path.as_str() {
+    match request_path {
         "/" => {
             response = "HTTP/1.1 200 OK\r\n\r\n";
         }
@@ -53,7 +54,15 @@ async fn handle_client_async(mut stream: TcpStream) {
                 pattern.is_match(file_path.trim())
             } =>
         {
-            formatted = handle_file_path(request_path);
+            let args: Vec<String> = env::args().collect();
+            let directory = args
+                .iter()
+                .find(|&arg| arg.starts_with("--directory "))
+                .unwrap()
+                .split(" ")
+                .collect::<Vec<&str>>()[1];
+
+            formatted = handle_file_path(request_path, directory);
             response = formatted.trim();
         }
         _ => {
@@ -64,27 +73,20 @@ async fn handle_client_async(mut stream: TcpStream) {
     stream.write_all(response.as_bytes()).unwrap();
 }
 
-fn handle_file_path(request_path: String) -> String {
-    let args: Vec<String> = env::args().collect();
-    let directory = args
-         .iter()
-         .find(|&arg| arg.starts_with("--directory="))
-         .unwrap()
-         .split("=")
-         .collect::<Vec<&str>>()[1];
+fn handle_file_path(request_path: &str, directory: &str) -> String {
     let file = request_path.split_once("/files/").unwrap().1;
 
-    let full_path = format!("{directory}{file}");
-    
-    println!("File path is: {full_path}");
+    let file_path = format!("{directory}{file}");
 
-    match fs::read(full_path) {
+    println!("File path is: {file_path}");
+
+    match fs::read(file_path) {
         Ok(content) => format!(
             "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
             content.len(),
             String::from_utf8(content).unwrap().trim(),
         ),
-        Err(_) => "HTTP/1.1 404 NOT FOUND\r\n\r\n".to_string(),
+        Err(_) => "HTTP/1.1 404 Not Found\r\n\r\n".to_string(),
     }
 }
 
