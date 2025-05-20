@@ -9,54 +9,49 @@ async fn main() -> std::io::Result<()> {
 
     loop {
         let (stream, _) = listener.accept()?;
-        
+
         tokio::spawn(async move {
             handle_client_async(stream).await;
         });
-    }    
+    }
 }
 
 async fn handle_client_async(mut stream: TcpStream) {
-    // for stream in listener.incoming() {
-    //     match stream {
-            // Ok(_stream) => {
-                let data = read_data(&mut stream);
+    let data = read_data(&mut stream);
 
-                let (request_line, header_and_body) = data.split_once("\r\n").unwrap();
-                let request_path = parse_header(request_line).path;
+    let (request_line, header_and_body) = data.split_once("\r\n").unwrap();
+    let request_path = parse_header(request_line).path;
 
-                let response: &str;
-                let formatted;
+    let response: &str;
+    let formatted;
 
-                match request_path.as_str() {
-                    "/" => {
-                        response = "HTTP/1.1 200 OK\r\n\r\n";
-                    }
-                    s if {
-                        let pattern = Regex::new(r"/echo/.+").unwrap();
-                        pattern.is_match(s.trim())
-                    } =>
-                    {
-                        let path = request_path.split_once("/echo/").unwrap().1;
-                        formatted = format!("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}", path.len(), path);
-                        response = formatted.trim();
-                    }
-                    "/user-agent" => {
-                        formatted = user_agent(header_and_body);
-                        response = formatted.trim();
-                    }
-                    _ => {
-                        response = "HTTP/1.1 404 Not Found\r\n\r\n";
-                    }
-                }
-                println!("Request was {} and response was {}", data, response);
-                stream.write_all(response.as_bytes()).unwrap();
-            // }
-            // Err(e) => {
-            //     println!("error: {}", e);
-            // }
-        // }
-    
+    match request_path.as_str() {
+        "/" => {
+            response = "HTTP/1.1 200 OK\r\n\r\n";
+        }
+        s if {
+            let pattern = Regex::new(r"/echo/.+").unwrap();
+            pattern.is_match(s.trim())
+        } =>
+        {
+            let path = request_path.split_once("/echo/").unwrap().1;
+            formatted = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
+                path.len(),
+                path
+            );
+            response = formatted.trim();
+        }
+        "/user-agent" => {
+            formatted = user_agent(header_and_body);
+            response = formatted.trim();
+        }
+        _ => {
+            response = "HTTP/1.1 404 Not Found\r\n\r\n";
+        }
+    }
+    println!("Request was {} and response was {}", data, response);
+    stream.write_all(response.as_bytes()).unwrap();
 }
 
 fn user_agent(header_and_body: &str) -> String {
