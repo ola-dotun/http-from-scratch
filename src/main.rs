@@ -3,13 +3,24 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
-fn main() {
-    let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
+    let listener = TcpListener::bind("127.0.0.1:4221")?;
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut _stream) => {
-                let data = read_data(&mut _stream);
+    loop {
+        let (stream, _) = listener.accept()?;
+        
+        tokio::spawn(async move {
+            handle_client_async(stream).await;
+        });
+    }    
+}
+
+async fn handle_client_async(mut stream: TcpStream) {
+    // for stream in listener.incoming() {
+    //     match stream {
+            // Ok(_stream) => {
+                let data = read_data(&mut stream);
 
                 let (request_line, header_and_body) = data.split_once("\r\n").unwrap();
                 let request_path = parse_header(request_line).path;
@@ -39,13 +50,13 @@ fn main() {
                     }
                 }
                 println!("Request was {} and response was {}", data, response);
-                _stream.write_all(response.as_bytes()).unwrap();
-            }
-            Err(e) => {
-                println!("error: {}", e);
-            }
-        }
-    }
+                stream.write_all(response.as_bytes()).unwrap();
+            // }
+            // Err(e) => {
+            //     println!("error: {}", e);
+            // }
+        // }
+    
 }
 
 fn user_agent(header_and_body: &str) -> String {
@@ -64,7 +75,8 @@ fn user_agent(header_and_body: &str) -> String {
     let body = format!("{value}");
     format!(
         "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
-        body.len(), body
+        body.len(),
+        body
     )
 }
 
