@@ -1,5 +1,4 @@
 use std::io::{Read, Write};
-#[allow(unused_imports)]
 use std::net::{TcpListener,  TcpStream};
 
 fn main() {
@@ -20,7 +19,7 @@ fn main() {
                         response = "HTTP/1.1 200 OK\r\n\r\n";
                     },
                     _ => {
-                        response = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
+                        response = "HTTP/1.1 404 Not Found\r\n\r\n";
                     }
                 }
                 println!("Request was {} and response was {}", data, response);
@@ -34,15 +33,12 @@ fn main() {
     }
 }
 
-fn read_data(stream: &mut TcpStream) -> String {    
-    let mut data = String::new();
+fn read_data(stream: &mut TcpStream) -> String {
+    let mut buffer = [0; 1024];
     
-    stream.read_to_string(&mut data).unwrap_or_else(|e| {
-        println!("error: {}", e);
-        0
-    });
+    stream.read(&mut buffer).unwrap();
     
-    data.trim().to_string()
+    String::from_utf8_lossy(&buffer[..]).trim().to_string()
 }
 
 fn parse_header(header: &str) -> Header {
