@@ -55,6 +55,7 @@ async fn handle_client_async(mut stream: TcpStream) {
             } =>
         {
             let args: Vec<String> = env::args().collect();
+            args.iter().for_each(|arg| println!("Each argument {arg}"));
             let directory = args
                 .iter()
                 .find(|&arg| arg.starts_with("--directory "))
