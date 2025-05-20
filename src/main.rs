@@ -11,7 +11,7 @@ fn main() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
-                _stream.write_all(String::from("200").as_bytes()).unwrap();
+                _stream.write_all(String::from("HTTP/1.1 200 OK\r\n\r\n").as_bytes()).unwrap();
             }
             Err(e) => {
                 println!("error: {}", e);
