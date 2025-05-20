@@ -2,7 +2,7 @@ use std::io::{Read, Write};
 #[allow(unused_imports)]
 use std::net::{TcpListener,  TcpStream};
 
-fn main() {  
+fn main() {
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
     
     for stream in listener.incoming() {
@@ -34,16 +34,13 @@ fn main() {
     }
 }
 
-fn read_data(stream: &mut TcpStream) -> String {
-    let buf = &mut[0; 1024];    
-    
+fn read_data(stream: &mut TcpStream) -> String {    
     let mut data = String::new();
-
-    let mut buffer_size = stream.read(buf).unwrap();
-    while buffer_size > 0 {
-        buffer_size = stream.read(buf).unwrap();
-        data.push_str(String::from_utf8(buf.to_vec()).unwrap().as_str());
-    }
+    
+    stream.read_to_string(&mut data).unwrap_or_else(|e| {
+        println!("error: {}", e);
+        0
+    });
     
     data.trim().to_string()
 }
@@ -51,14 +48,14 @@ fn read_data(stream: &mut TcpStream) -> String {
 fn parse_header(header: &str) -> Header {
     let parts = header.split_whitespace().collect::<Vec<&str>>();
     Header {
-        method: String::from(parts[0]),
+        // method: String::from(parts[0]),
         path: String::from(parts[1]),
-        http_version: String::from(parts[2]),
+        // http_version: String::from(parts[2]),
     }
 }
 
 struct Header {
-    method: String,
+    // method: String,
     path: String,
-    http_version: String,
+    // http_version: String,
 }
