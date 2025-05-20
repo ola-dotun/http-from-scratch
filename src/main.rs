@@ -49,7 +49,7 @@ async fn handle_client_async(mut stream: TcpStream) {
         }
         file_path
             if {
-                let pattern = Regex::new(r"/file/(.*)").unwrap();
+                let pattern = Regex::new(r"/files/(.*)").unwrap();
                 pattern.is_match(file_path.trim())
             } =>
         {
@@ -65,7 +65,7 @@ async fn handle_client_async(mut stream: TcpStream) {
 }
 
 fn handle_file_path(request_path: String) -> String {
-    let file = request_path.split_once("/file/").unwrap().1;
+    let file = request_path.split_once("/files/").unwrap().1;
     let content = fs::read(file).unwrap();
     format!(
         "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
