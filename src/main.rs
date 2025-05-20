@@ -55,16 +55,20 @@ async fn handle_client_async(mut stream: TcpStream) {
             } =>
         {
             let args: Vec<String> = env::args().collect();
-            args.iter().for_each(|arg| println!("Each argument {arg}"));
-            let directory = args
-                .iter()
-                .find(|&arg| arg.starts_with("--directory "))
-                .unwrap()
-                .split(" ")
-                .collect::<Vec<&str>>()[1];
+            let mut iterator = args.iter();
 
-            formatted = handle_file_path(request_path, directory);
-            response = formatted.trim();
+            let directory;
+
+            loop {
+                let arg = iterator.next();
+                if arg.unwrap().as_str().eq("--directory ") {
+                    directory = iterator.next().unwrap().as_str();
+
+                    formatted = handle_file_path(request_path, directory);
+                    response = formatted.trim();
+                    break;
+                }
+            }
         }
         _ => {
             response = "HTTP/1.1 404 Not Found\r\n\r\n";
