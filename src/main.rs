@@ -1,5 +1,6 @@
 use regex::Regex;
 use std::collections::HashMap;
+use std::fs;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
@@ -44,6 +45,17 @@ async fn handle_client_async(mut stream: TcpStream) {
         }
         "/user-agent" => {
             formatted = user_agent(header_and_body);
+            response = formatted.trim();
+        }
+        file_path
+            if {
+                let pattern = Regex::new(r"/file/(.*)").unwrap();
+                pattern.is_match(file_path.trim())
+            } =>
+        {
+            let file = request_path.split_once("/file/").unwrap().1;
+            let content = fs::read(file).unwrap();
+            formatted = format!("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}", content.len(), content.len());
             response = formatted.trim();
         }
         _ => {
