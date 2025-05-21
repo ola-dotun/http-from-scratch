@@ -24,7 +24,7 @@ async fn handle_client_async(mut stream: TcpStream) {
     let request_path = parse_header(request_line).path;
     let request_path = request_path.as_str();
 
-    let response: &str;
+    let mut response: &str = "";
     let formatted;
 
     match request_path {
@@ -59,15 +59,18 @@ async fn handle_client_async(mut stream: TcpStream) {
 
             let directory;
 
-            loop {
-                let arg = iterator.next();
-                if arg.unwrap().as_str().eq("--directory ") {
+            while let Some(arg) = iterator.next() {
+                if arg.as_str().eq("--directory ") {
                     directory = iterator.next().unwrap().as_str();
 
                     formatted = handle_file_path(request_path, directory);
                     response = formatted.trim();
                     break;
-                }
+                }                
+            }
+            
+            if response.is_empty() {
+                response = "HTTP/1.1 404 Not Found\r\n\r\n";
             }
         }
         _ => {
