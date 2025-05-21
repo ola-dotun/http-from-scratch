@@ -69,9 +69,14 @@ async fn handle_client_async(mut stream: TcpStream) {
                             response = formatted.as_str();
                         }
                         "POST" => match header_and_body.split_once("\r\n\r\n") {
-                            Some((_, body)) => {
-                                match save_content_to_file_path(directory.as_str(), file_name, body)
-                                {
+                            Some((headers, body)) => {
+                                let content_length = header_value(headers, "Content-Length");
+                                match save_content_to_file_path(
+                                    directory.as_str(),
+                                    file_name,
+                                    body,
+                                    content_length.parse().unwrap(),
+                                ) {
                                     Ok(_) => response = "HTTP/1.1 201 Created\r\n\r\n",
                                     Err(_) => response = HTTP_404,
                                 }
@@ -119,6 +124,7 @@ fn save_content_to_file_path(
     directory: &str,
     file_name: &str,
     content: &str,
+    content_length: u64,
 ) -> Result<(), std::io::Error> {
     let file_path = format!("{directory}{file_name}");
 
@@ -126,7 +132,7 @@ fn save_content_to_file_path(
 
     match file.write(content.trim().as_bytes()) {
         Ok(_) => {
-            file.set_len(55)?;
+            file.set_len(content_length)?;
             Ok(())
         }
         Err(_) => panic!("Couldn't save file"),
@@ -134,7 +140,18 @@ fn save_content_to_file_path(
 }
 
 fn user_agent(header_and_body: &str) -> String {
-    let pairs = header_and_body.trim().split("\r\n");
+    let value = header_value(header_and_body, "User-Agent");
+    let body = format!("{value}");
+    format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
+        body.len(),
+        body
+    )
+}
+
+fn header_value<'a>(headers: &'a str, header: &str) -> &'a str {
+    let pairs = headers.trim().split("\r\n");
+
     let mut dictionary = HashMap::new();
     for pair in pairs {
         match pair.split_once(": ") {
@@ -144,14 +161,8 @@ fn user_agent(header_and_body: &str) -> String {
             None => {}
         };
     }
-    let key = "User-Agent";
-    let value = dictionary.get(key).unwrap();
-    let body = format!("{value}");
-    format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
-        body.len(),
-        body
-    )
+
+    dictionary.get(header).unwrap()
 }
 
 fn read_data(stream: &mut TcpStream) -> String {
