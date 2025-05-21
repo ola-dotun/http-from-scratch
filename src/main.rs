@@ -70,6 +70,7 @@ async fn handle_client_async(mut stream: TcpStream) {
             }
             
             if response.is_empty() {
+                println!("Response was empty so returning 404");
                 response = "HTTP/1.1 404 Not Found\r\n\r\n";
             }
         }
