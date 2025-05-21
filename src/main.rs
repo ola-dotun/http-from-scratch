@@ -124,7 +124,7 @@ fn save_content_to_file_path(
 
     let mut file = fs::File::create(file_path)?;    
 
-    match file.write(content.as_bytes()) {
+    match file.write(b"oranges") {
         Ok(_) => Ok(()),
         Err(_) => panic!("Couldn't save file"),
     }
