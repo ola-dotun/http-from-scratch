@@ -1,12 +1,19 @@
 use regex::Regex;
+use socket2::{Domain, Socket, Type};
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::{env, fs};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:4221")?;
+    let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
+    socket.set_only_v6(false)?;
+    let address: SocketAddr = "[::1]:4221".parse().unwrap();
+    socket.bind(&address.into())?;
+    socket.listen(128)?;
+
+    let listener: TcpListener = socket.into();
 
     loop {
         let (stream, _) = listener.accept()?;
@@ -31,7 +38,7 @@ async fn handle_client_async(mut stream: TcpStream) {
 
     match request_path {
         "/" => {
-            response = "HTTP/1.1 200 OK\r\n\r\n";
+            response = "HTTP/1.1 200 OK\r\n\r\nConnection: keep-alive\r\n";
         }
         path if {
             let pattern = Regex::new(r"/echo/.+").unwrap();
@@ -40,7 +47,7 @@ async fn handle_client_async(mut stream: TcpStream) {
         {
             let path = request_path.split_once("/echo/").unwrap().1;
             formatted = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
+                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: keep-alive\r\nContent-Length: {}\r\n\r\n{}",
                 path.len(),
                 path
             );
@@ -91,6 +98,33 @@ async fn handle_client_async(mut stream: TcpStream) {
         }
         _ => response = HTTP_404,
     }
+    // println!(
+    //     "read time out: {}",
+    //     stream.read_timeout().unwrap().unwrap().as_secs()
+    // );
+    // println!(
+    //     "write time out: {}",
+    //     stream.write_timeout().unwrap().unwrap().as_secs()
+    // );
+
+    // stream.set_read_timeout(None).unwrap();
+    // stream.set_write_timeout(None).unwrap();
+
+    // match stream.read_timeout() {
+    //     Ok(t) => println!(
+    //         "read time out: {}",
+    //         if t.is_some() {
+    //             t.unwrap().as_secs()
+    //         } else {
+    //             Duration::from_micros(1).as_secs()
+    //         }
+    //     ),
+    //     Err(_) => println!(
+    //         "read time out is : {}",
+    //         stream.read_timeout().unwrap().unwrap().as_secs()
+    //     ),
+    // }
+
     stream.write_all(response.as_bytes()).unwrap();
 }
 
@@ -143,7 +177,7 @@ fn user_agent(header_and_body: &str) -> String {
     let value = header_value(header_and_body, "User-Agent");
     let body = format!("{value}");
     format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: keep-alive\r\nContent-Length: {}\r\n\r\n{}",
         body.len(),
         body
     )
