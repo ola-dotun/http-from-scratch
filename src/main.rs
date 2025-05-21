@@ -60,7 +60,7 @@ async fn handle_client_async(mut stream: TcpStream) {
             let directory;
 
             while let Some(arg) = iterator.next() {
-                if arg.as_str().eq("--directory ") {
+                if arg.as_str().eq("--directory") {
                     directory = iterator.next().unwrap().as_str();
 
                     formatted = handle_file_path(request_path, directory);
