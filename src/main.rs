@@ -124,7 +124,7 @@ fn save_content_to_file_path(
 
     println!("File content: {content}");
 
-    match fs::write(file_path, content.trim()) {
+    match fs::write(file_path, format!("{content}")) {
         Ok(_) => Ok(()),
         Err(_) => panic!("Couldn't save file"),
     }
