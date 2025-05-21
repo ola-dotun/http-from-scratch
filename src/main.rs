@@ -17,6 +17,8 @@ async fn main() -> std::io::Result<()> {
     }
 }
 
+const HTTP_404: &str = "HTTP/1.1 404 Not Found\r\n\r\n";
+
 async fn handle_client_async(mut stream: TcpStream) {
     let data = read_data(&mut stream);
 
@@ -71,11 +73,11 @@ async fn handle_client_async(mut stream: TcpStream) {
             
             if response.is_empty() {
                 println!("Response was empty so returning 404");
-                response = "HTTP/1.1 404 Not Found\r\n\r\n";
+                response = HTTP_404;
             }
         }
         _ => {
-            response = "HTTP/1.1 404 Not Found\r\n\r\n";
+            response = HTTP_404;
         }
     }
     println!("Request was {} and response was {}", data, response);
@@ -95,7 +97,7 @@ fn handle_file_path(request_path: &str, directory: &str) -> String {
             content.len(),
             String::from_utf8(content).unwrap().trim(),
         ),
-        Err(_) => "HTTP/1.1 404 Not Found\r\n\r\n".to_string(),
+        Err(_) => HTTP_404.to_string(),
     }
 }
 
