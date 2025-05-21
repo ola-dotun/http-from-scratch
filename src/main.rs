@@ -16,13 +16,13 @@ async fn main() -> std::io::Result<()> {
         });
     }
 }
-
+const CRLF: &str = "\r\n";
 const HTTP_404: &str = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 
 async fn handle_client_async(mut stream: TcpStream) {
     let data = read_data(&mut stream);
 
-    let (request_line, header_and_body) = data.split_once("\r\n").unwrap();
+    let (request_line, header_and_body) = data.split_once(CRLF).unwrap();
     let request_header = parse_header(request_line);
     let request_path = request_header.path.as_str();
 
@@ -112,7 +112,7 @@ fn get_file_from_file_path(directory: &str, file_name: &str) -> String {
 
     match fs::read(file_path) {
         Ok(content) => format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n{}",
+            "HTTP/1.1 200 OK{CRLF}Content-Type: application/octet-stream{CRLF}Content-Length: {}{CRLF}{CRLF}{}",
             content.len(),
             String::from_utf8(content).unwrap().trim(),
         ),
