@@ -66,7 +66,7 @@ async fn handle_client_async(mut stream: TcpStream) {
                     directory = iterator.next().unwrap().as_str();
 
                     formatted = handle_file_path(request_path, directory);
-                    response = formatted.trim();
+                    response = formatted.as_str();
                     break;
                 }
             }
