@@ -122,7 +122,7 @@ fn save_content_to_file_path(
 ) -> Result<(), std::io::Error> {
     let file_path = format!("{directory}{file_name}");
 
-    match fs::write(file_path, content) {
+    match fs::write(file_path, content.trim()) {
         Ok(_) => Ok(()),
         Err(_) => panic!("Couldn't save file"),
     }
