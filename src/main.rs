@@ -17,7 +17,7 @@ async fn main() -> std::io::Result<()> {
     }
 }
 
-const HTTP_404: &str = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r";
+const HTTP_404: &str = "HTTP/1.1 404\r\nContent-Length: 0\r\n\r\n";
 
 async fn handle_client_async(mut stream: TcpStream) {
     let data = read_data(&mut stream);
@@ -80,7 +80,7 @@ async fn handle_client_async(mut stream: TcpStream) {
             response = HTTP_404;
         }
     }
-    println!("Request was {} and response was {}", data, response);
+    // println!("Request was {} and response was {}", data, response);
     stream.write_all(response.as_bytes()).unwrap();
 }
 
