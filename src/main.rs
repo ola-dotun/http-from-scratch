@@ -23,10 +23,10 @@ async fn handle_client_async(mut stream: TcpStream) {
     let data = read_data(&mut stream);
 
     let (request_line, header_and_body) = data.split_once("\r\n").unwrap();
-    let request_path = parse_header(request_line).path;
-    let request_path = request_path.as_str();
+    let request_header = parse_header(request_line);
+    let request_path = request_header.path.as_str();
 
-    let mut response: &str = "";
+    let response: &str;
     let formatted;
 
     match request_path {
@@ -56,40 +56,54 @@ async fn handle_client_async(mut stream: TcpStream) {
                 pattern.is_match(file_path.trim())
             } =>
         {
-            let args: Vec<String> = env::args().collect();
-            let mut iterator = args.iter();
+            let directory = directory_from_args();
+            let file_name = request_path.split_once("/files/").unwrap().1;
 
-            let directory;
+            match directory {
+                Some(directory) => {
+                    let http_method = request_header.method.as_str();
 
-            while let Some(arg) = iterator.next() {
-                if arg.as_str().eq("--directory") {
-                    directory = iterator.next().unwrap().as_str();
-
-                    formatted = handle_file_path(request_path, directory);
-                    response = formatted.as_str();
-                    break;
+                    match http_method {
+                        "GET" => {
+                            formatted = get_file_from_file_path(directory.as_str(), file_name);
+                            response = formatted.as_str();
+                        }
+                        "POST" => match header_and_body.split_once("\r\n\r\n") {
+                            Some((_, body)) => {
+                                match save_content_to_file_path(directory.as_str(), file_name, body)
+                                {
+                                    Ok(_) => response = "HTTP/1.1 201 Created\r\n\r\n",
+                                    Err(_) => response = HTTP_404,
+                                }
+                            }
+                            None => response = HTTP_404,
+                        },
+                        _ => response = HTTP_404,
+                    }
                 }
-            }
-
-            if response.is_empty() {
-                println!("Response was empty so returning 404");
-                response = HTTP_404;
+                None => response = HTTP_404,
             }
         }
-        _ => {
-            response = HTTP_404;
-        }
+        _ => response = HTTP_404,
     }
-    // println!("Request was {} and response was {}", data, response);
     stream.write_all(response.as_bytes()).unwrap();
 }
 
-fn handle_file_path(request_path: &str, directory: &str) -> String {
-    let file = request_path.split_once("/files/").unwrap().1;
+fn directory_from_args() -> Option<String> {
+    let args: Vec<String> = env::args().collect();
+    let mut iterator = args.iter();
 
-    let file_path = format!("{directory}{file}");
+    while let Some(arg) = iterator.next() {
+        if arg.as_str().eq("--directory") {
+            return Some(iterator.next().unwrap().to_string());
+        }
+    }
 
-    println!("File path is: {file_path}");
+    None
+}
+
+fn get_file_from_file_path(directory: &str, file_name: &str) -> String {
+    let file_path = format!("{directory}{file_name}");
 
     match fs::read(file_path) {
         Ok(content) => format!(
@@ -98,6 +112,19 @@ fn handle_file_path(request_path: &str, directory: &str) -> String {
             String::from_utf8(content).unwrap().trim(),
         ),
         Err(_) => HTTP_404.to_string(),
+    }
+}
+
+fn save_content_to_file_path(
+    directory: &str,
+    file_name: &str,
+    content: &str,
+) -> Result<(), std::io::Error> {
+    let file_path = format!("{directory}{file_name}");
+
+    match fs::write(file_path, content) {
+        Ok(_) => Ok(()),
+        Err(_) => panic!("Couldn't save file"),
     }
 }
 
@@ -133,14 +160,14 @@ fn read_data(stream: &mut TcpStream) -> String {
 fn parse_header(header: &str) -> Header {
     let parts = header.split_whitespace().collect::<Vec<&str>>();
     Header {
-        // method: String::from(parts[0]),
+        method: String::from(parts[0]),
         path: String::from(parts[1]),
         // http_version: String::from(parts[2]),
     }
 }
 
 struct Header {
-    // method: String,
+    method: String,
     path: String,
     // http_version: String,
 }
