@@ -123,6 +123,7 @@ fn save_content_to_file_path(
     let file_path = format!("{directory}{file_name}");
 
     let mut file = fs::File::create(file_path)?;
+    file.set_len(content.len() as u64)?;
 
     match file.write(content.trim().as_bytes()) {
         Ok(_) => Ok(()),
