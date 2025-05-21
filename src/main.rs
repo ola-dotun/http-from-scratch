@@ -122,10 +122,9 @@ fn save_content_to_file_path(
 ) -> Result<(), std::io::Error> {
     let file_path = format!("{directory}{file_name}");
 
-    // let mut file = fs::File::create(file_path)?;
-    // file.write(content.as_bytes())?;
+    let mut file = fs::File::create(file_path)?;    
 
-    match fs::write(file_path, content.as_bytes()) {
+    match file.write(content.as_bytes()) {
         Ok(_) => Ok(()),
         Err(_) => panic!("Couldn't save file"),
     }
