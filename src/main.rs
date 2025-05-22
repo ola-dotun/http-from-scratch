@@ -1,23 +1,17 @@
 use regex::Regex;
-use socket2::{Domain, Protocol, Socket, Type};
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{TcpListener, TcpStream};
+use std::time::Duration;
 use std::{env, fs};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let socket = Socket::new(Domain::IPV4, Type::RAW, Some(Protocol::ICMPV4))?;
-    socket.set_only_v6(false)?;
-    socket.set_keepalive(true)?;
-    let address: SocketAddr = "127.0.0.1:4221".parse().unwrap();
-    socket.bind(&address.into())?;
-    socket.listen(128)?;
-
-    let listener: TcpListener = socket.into();
+    let listener = TcpListener::bind("127.0.0.1:4221")?;
+    listener.set_ttl(210)?;
 
     loop {
-        let (stream, _) = listener.accept()?;
+        let stream = listener.incoming().next().unwrap()?;
 
         tokio::spawn(async move {
             handle_client_async(stream).await;
@@ -108,8 +102,12 @@ async fn handle_client_async(mut stream: TcpStream) {
     //     stream.write_timeout().unwrap().unwrap().as_secs()
     // );
 
-    // stream.set_read_timeout(None).unwrap();
-    // stream.set_write_timeout(None).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::new(1000, 0)))
+        .unwrap();
+    stream
+        .set_write_timeout(Some(Duration::new(1000, 0)))
+        .unwrap();
 
     // match stream.read_timeout() {
     //     Ok(t) => println!(
@@ -126,7 +124,7 @@ async fn handle_client_async(mut stream: TcpStream) {
     //     ),
     // }
 
-    stream.write_all(response.as_bytes()).unwrap();
+    stream.write(response.as_bytes()).unwrap();
 }
 
 fn directory_from_args() -> Option<String> {
