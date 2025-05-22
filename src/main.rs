@@ -1,5 +1,5 @@
 use regex::Regex;
-use socket2::{Domain, Socket, Type};
+use socket2::{Domain, Protocol, Socket, Type};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -7,9 +7,10 @@ use std::{env, fs};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    let socket = Socket::new(Domain::IPV6, Type::STREAM, None)?;
+    let socket = Socket::new(Domain::IPV4, Type::RAW, Some(Protocol::ICMPV4))?;
     socket.set_only_v6(false)?;
-    let address: SocketAddr = "[::1]:4221".parse().unwrap();
+    socket.set_keepalive(true)?;
+    let address: SocketAddr = "127.0.0.1:4221".parse().unwrap();
     socket.bind(&address.into())?;
     socket.listen(128)?;
 
