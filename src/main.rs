@@ -11,7 +11,6 @@ async fn main() -> std::io::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:4221")?;
 
     loop {
-        listener.set_nonblocking(true)?;
         let (mut stream, peer_address) = listener.accept()?;
         println!("Received: Listening now...");
         let address = peer_address.to_string();
