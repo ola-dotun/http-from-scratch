@@ -2,6 +2,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::time::Duration;
 use std::{env, fs};
 
 #[tokio::main]
@@ -10,22 +11,24 @@ async fn main() -> std::io::Result<()> {
     let listener = TcpListener::bind("127.0.0.1:4221")?;
 
     loop {
-        let (mut stream, socket_addr) = listener.accept()?;
-        let address = socket_addr.to_string();
+        listener.set_nonblocking(true)?;
+        let (mut stream, peer_address) = listener.accept()?;
+        println!("Received: Listening now...");
+        let address = peer_address.to_string();
 
         let cached_stream = match cached_streams.get(&address) {
             Some(mut cached) => {
                 let mut buf = [0; 1024];
                 stream.read(&mut buf)?;
                 cached.write(&mut buf)?;
-                cached.try_clone()?
+                let clone = cached.try_clone()?;
+                clone
             }
             None => {
                 let key = address.clone();
                 cached_streams.insert(address, stream);
                 let cached = cached_streams.get(&key).unwrap();
-                let clone = cached.try_clone()?;
-                clone
+                cached.try_clone()?
             }
         };
 
@@ -34,10 +37,11 @@ async fn main() -> std::io::Result<()> {
         });
     }
 }
+
 const CRLF: &str = "\r\n";
 const HTTP_404: &str = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 
-async fn handle_client_async(mut stream: TcpStream) {
+async fn handle_client_async(mut stream: std::net::TcpStream) {
     let data = read_data(&mut stream);
 
     let (request_line, header_and_body) = data.split_once(CRLF).unwrap();
@@ -65,7 +69,7 @@ async fn handle_client_async(mut stream: TcpStream) {
             response = formatted.trim();
         }
         "/user-agent" => {
-            formatted = user_agent(header_and_body);
+            formatted = user_agent(header_and_body).await;
             response = formatted.trim();
         }
         file_path
@@ -110,7 +114,15 @@ async fn handle_client_async(mut stream: TcpStream) {
         _ => response = HTTP_404,
     }
 
-    stream.write_all(response.as_bytes()).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    stream.set_ttl(200).unwrap();
+
+    stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
 
@@ -159,7 +171,7 @@ fn save_content_to_file_path(
     }
 }
 
-fn user_agent(header_and_body: &str) -> String {
+async fn user_agent(header_and_body: &str) -> String {
     let value = header_value(header_and_body, "User-Agent");
     let body = format!("{value}");
     format!(
@@ -185,7 +197,7 @@ fn header_value<'a>(headers: &'a str, header: &str) -> &'a str {
     dictionary.get(header).unwrap()
 }
 
-fn read_data(stream: &mut TcpStream) -> String {
+fn read_data(stream: &mut std::net::TcpStream) -> String {
     let mut buffer = [0; 1024];
 
     stream.read(&mut buffer).unwrap();
