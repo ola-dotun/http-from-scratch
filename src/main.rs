@@ -2,19 +2,35 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::time::Duration;
 use std::{env, fs};
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    let mut cached_streams: HashMap<String, TcpStream> = HashMap::new();
     let listener = TcpListener::bind("127.0.0.1:4221")?;
-    listener.set_ttl(210)?;
 
     loop {
-        let stream = listener.incoming().next().unwrap()?;
+        let (mut stream, socket_addr) = listener.accept()?;
+        let address = socket_addr.to_string();
+
+        let cached_stream = match cached_streams.get(&address) {
+            Some(mut cached) => {
+                let mut buf = [0; 1024];
+                stream.read(&mut buf)?;
+                cached.write(&mut buf)?;
+                cached.try_clone()?
+            }
+            None => {
+                let key = address.clone();
+                cached_streams.insert(address, stream);
+                let cached = cached_streams.get(&key).unwrap();
+                let clone = cached.try_clone()?;
+                clone
+            }
+        };
 
         tokio::spawn(async move {
-            handle_client_async(stream).await;
+            handle_client_async(cached_stream).await;
         });
     }
 }
@@ -93,38 +109,9 @@ async fn handle_client_async(mut stream: TcpStream) {
         }
         _ => response = HTTP_404,
     }
-    // println!(
-    //     "read time out: {}",
-    //     stream.read_timeout().unwrap().unwrap().as_secs()
-    // );
-    // println!(
-    //     "write time out: {}",
-    //     stream.write_timeout().unwrap().unwrap().as_secs()
-    // );
 
-    stream
-        .set_read_timeout(Some(Duration::new(1000, 0)))
-        .unwrap();
-    stream
-        .set_write_timeout(Some(Duration::new(1000, 0)))
-        .unwrap();
-
-    // match stream.read_timeout() {
-    //     Ok(t) => println!(
-    //         "read time out: {}",
-    //         if t.is_some() {
-    //             t.unwrap().as_secs()
-    //         } else {
-    //             Duration::from_micros(1).as_secs()
-    //         }
-    //     ),
-    //     Err(_) => println!(
-    //         "read time out is : {}",
-    //         stream.read_timeout().unwrap().unwrap().as_secs()
-    //     ),
-    // }
-
-    stream.write(response.as_bytes()).unwrap();
+    stream.write_all(response.as_bytes()).unwrap();
+    stream.flush().unwrap();
 }
 
 fn directory_from_args() -> Option<String> {
