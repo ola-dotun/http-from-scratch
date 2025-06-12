@@ -121,8 +121,14 @@ async fn handle_client_async(mut stream: std::net::TcpStream) {
         .unwrap();
     stream.set_ttl(200).unwrap();
 
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+    // loop {
+        let read = stream.write_all(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+
+    //     if read == 0 {
+    //         break;
+    //     }
+    // }
 }
 
 fn directory_from_args() -> Option<String> {
@@ -197,7 +203,7 @@ fn header_value<'a>(headers: &'a str, header: &str) -> &'a str {
 }
 
 fn read_data(stream: &mut std::net::TcpStream) -> String {
-    let mut buffer = [0; 1024];
+    let mut buffer = [0; 2048];
 
     stream.read(&mut buffer).unwrap();
 
